@@ -49,7 +49,12 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
     override def read(json: JsValue): Transformer = {
       (json.asJsObject.fields("type"): String) match {
         case Transformer.linearRegressionModelName => json.convertTo[LinearRegressionModel]
+        case Transformer.oneHotEncoderModelName => json.convertTo[OneHotEncoderModel]
+        case Transformer.pipelineModelName => json.convertTo[PipelineModel]
+        case Transformer.randomForestRegressionModelName => json.convertTo[RandomForestRegressionModel]
+        case Transformer.standardScalerModelName => json.convertTo[StandardScalerModel]
         case Transformer.stringIndexerModelName => json.convertTo[StringIndexerModel]
+        case Transformer.vectorAssemblerModelName => json.convertTo[VectorAssemblerModel]
       }
     }
   }
