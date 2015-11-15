@@ -4,7 +4,7 @@ import java.io._
 import java.nio.charset.Charset
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
-import org.apache.mleap.runtime.{RuntimeJsonSupport, Transformer}
+import org.apache.mleap.runtime.Transformer
 import spray.json._
 import scala.language.implicitConversions
 import scala.util.Try

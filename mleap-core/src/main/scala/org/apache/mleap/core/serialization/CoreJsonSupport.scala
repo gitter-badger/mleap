@@ -1,11 +1,11 @@
-package org.apache.mleap.core
+package org.apache.mleap.core.serialization
 
-import org.apache.mleap.core.feature.{VectorAssembler, StandardScaler, OneHotEncoder, StringIndexer}
-import org.apache.mleap.core.linalg.{SparseVector, Vector, DenseVector}
-import org.apache.mleap.core.regression.{RandomForestRegression, DecisionTreeRegression, LinearRegression}
+import org.apache.mleap.core.feature.{OneHotEncoder, StandardScaler, StringIndexer, VectorAssembler}
+import org.apache.mleap.core.linalg.{DenseVector, SparseVector, Vector}
+import org.apache.mleap.core.regression.{DecisionTreeRegression, LinearRegression, RandomForestRegression}
 import org.apache.mleap.core.tree._
-import spray.json.DefaultJsonProtocol
-import spray.json._
+import spray.json.{DefaultJsonProtocol, _}
+
 import scala.language.implicitConversions
 
 /**

@@ -1,11 +1,12 @@
-package org.apache.mleap.runtime
+package org.apache.mleap.runtime.serialization
 
-import org.apache.mleap.core.CoreJsonSupport
 import org.apache.mleap.core.linalg.Vector
+import org.apache.mleap.core.serialization.CoreJsonSupport
 import org.apache.mleap.runtime.transformer._
-import org.apache.mleap.runtime.types.{StructType, DataType, StructField}
-import spray.json.DefaultJsonProtocol
-import spray.json._
+import org.apache.mleap.runtime.types.{DataType, StructField, StructType}
+import org.apache.mleap.runtime.{ArrayDataset, LocalLeapFrame, Row, Transformer}
+import spray.json.{DefaultJsonProtocol, _}
+
 import scala.language.implicitConversions
 
 
@@ -39,6 +40,7 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
     override def write(obj: Transformer): JsValue = obj match {
       case obj: LinearRegressionModel => obj.toJson
       case obj: OneHotEncoderModel => obj.toJson
+      case obj: OutputSelector => obj.toJson
       case obj: PipelineModel => obj.toJson
       case obj: RandomForestRegressionModel => obj.toJson
       case obj: StandardScalerModel => obj.toJson
@@ -50,6 +52,7 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
       (json.asJsObject.fields("type"): String) match {
         case Transformer.linearRegressionModelName => json.convertTo[LinearRegressionModel]
         case Transformer.oneHotEncoderModelName => json.convertTo[OneHotEncoderModel]
+        case Transformer.outputSelectorName => json.convertTo[OutputSelector]
         case Transformer.pipelineModelName => json.convertTo[PipelineModel]
         case Transformer.randomForestRegressionModelName => json.convertTo[RandomForestRegressionModel]
         case Transformer.standardScalerModelName => json.convertTo[StandardScalerModel]
@@ -63,6 +66,7 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
 
   private implicit val mleapLinearRegressionModelFormat = TypedFormat[LinearRegressionModel](Transformer.linearRegressionModelName, jsonFormat3(LinearRegressionModel))
   private implicit val mleapOneHotEncoderModelFormat = TypedFormat[OneHotEncoderModel](Transformer.oneHotEncoderModelName, jsonFormat3(OneHotEncoderModel))
+  private implicit val mleapOutputSelectorFormat = TypedFormat[OutputSelector](Transformer.outputSelectorName, jsonFormat1(OutputSelector))
   private implicit val mleapPipelineModelFormat = TypedFormat[PipelineModel](Transformer.pipelineModelName, jsonFormat1(PipelineModel))
   private implicit val mleapRandomForestRegressionModelFormat = TypedFormat[RandomForestRegressionModel](Transformer.randomForestRegressionModelName, jsonFormat3(RandomForestRegressionModel))
   private implicit val mleapStandardScalerModelFormat = TypedFormat[StandardScalerModel](Transformer.standardScalerModelName, jsonFormat3(StandardScalerModel))
