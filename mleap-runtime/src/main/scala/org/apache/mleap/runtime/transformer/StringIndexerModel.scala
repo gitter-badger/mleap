@@ -16,7 +16,7 @@ case class StringIndexerModel(inputCol: String,
   override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(inputCol, StringType).flatMap {
       case (b, inputIndex) =>
-        b.endWithOutput(outputCol, DoubleType)(row => indexer(row.getAs[String](inputIndex)))
+        b.endWithOutput(outputCol, DoubleType)(row => indexer(row.getString(inputIndex)))
     }
   }
 }

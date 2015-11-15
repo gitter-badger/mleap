@@ -16,7 +16,7 @@ case class OneHotEncoderModel(inputCol: String,
   override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(inputCol, DoubleType).flatMap {
       case (b, inputIndex) =>
-        b.endWithOutput(outputCol, VectorType)(row => encoder(row.getAs[Double](inputIndex)))
+        b.endWithOutput(outputCol, VectorType)(row => encoder(row.getDouble(inputIndex)))
     }
   }
 }

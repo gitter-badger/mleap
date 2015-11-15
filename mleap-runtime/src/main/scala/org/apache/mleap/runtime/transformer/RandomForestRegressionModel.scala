@@ -17,7 +17,7 @@ case class RandomForestRegressionModel(featuresCol: String,
   override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(featuresCol, VectorType).flatMap {
       case(b, featuresIndex) =>
-        b.endWithOutput(predictionCol, DoubleType)(row => model(row.getAs[Vector](featuresIndex)))
+        b.endWithOutput(predictionCol, DoubleType)(row => model(row.getVector(featuresIndex)))
     }
   }
 }

@@ -17,7 +17,7 @@ case class StandardScalerModel(inputCol: String,
   override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(inputCol, VectorType).flatMap {
       case (b, inputIndex) =>
-        b.endWithOutput(outputCol, VectorType)(row => scaler(row.getAs[Vector](inputIndex)))
+        b.endWithOutput(outputCol, VectorType)(row => scaler(row.getVector(inputIndex)))
     }
   }
 }
