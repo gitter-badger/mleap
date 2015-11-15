@@ -2,7 +2,8 @@ package org.apache.mleap.runtime.transformer
 
 import org.apache.mleap.core.feature.StandardScaler
 import org.apache.mleap.core.linalg.Vector
-import org.apache.mleap.runtime.types.{StructType, VectorType, StructField}
+import org.apache.mleap.runtime.transformer.builder.TransformBuilder
+import org.apache.mleap.runtime.types.{DoubleType, StructType, VectorType, StructField}
 import org.apache.mleap.runtime._
 
 import scala.util.Try
@@ -13,18 +14,10 @@ import scala.util.Try
 case class StandardScalerModel(inputCol: String,
                                outputCol: String,
                                scaler: StandardScaler) extends Transformer {
-  override def calculateSchema(calc: SchemaCalculator): Try[SchemaCalculator] = {
-    calc.withInputField(inputCol, VectorType)
-      .flatMap(_.withOutputField(outputCol, VectorType))
-  }
-
-  override def transform(features: LeapFrame): LeapFrame = {
-    val inputIndex = features.schema.indexOf(inputCol)
-    val scale = {
-      (row: Row) =>
-        scaler(row.getAs[Vector](inputIndex))
+  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+    builder.withInput(inputCol, VectorType).flatMap {
+      case (b, inputIndex) =>
+        b.endWithOutput(outputCol, VectorType)(row => scaler(row.getAs[Vector](inputIndex)))
     }
-
-    features.withFeature(StructField(outputCol, VectorType), scale)
   }
 }

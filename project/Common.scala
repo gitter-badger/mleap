@@ -7,5 +7,6 @@ object Common {
   val settings = Seq(
     version := appVersion,
     scalaVersion := "2.10.6",
-    organization := "org.apache.mleap")
+    organization := "org.apache.mleap",
+    scalacOptions ++= Seq("-unchecked", "-deprecation"))
 }

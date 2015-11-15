@@ -1,5 +1,6 @@
 package org.apache.mleap.runtime
 
+import org.apache.mleap.runtime.transformer.builder.TransformBuilder
 import org.apache.mleap.runtime.types.StructType
 
 import scala.util.Try
@@ -22,7 +23,5 @@ object Transformer {
 }
 
 trait Transformer extends Serializable {
-  def transform(dataset: LeapFrame): LeapFrame
-//  lazy val schema: TransformerSchema = calculateSchema(SchemaCalculator()).get.toSchema
-  def calculateSchema(calc: SchemaCalculator): Try[SchemaCalculator]
+  def transform[T <: TransformBuilder[T]](builder: T): Try[T]
 }

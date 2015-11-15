@@ -10,6 +10,8 @@ case class RandomForestRegression(trees: Seq[DecisionTreeRegression],
                                   treeWeights: Seq[Double]) extends TreeEnsemble {
   val numTrees = trees.length
 
+  def apply(features: Vector): Double = predict(features)
+
   def predict(features: Vector): Double = {
     trees.map(_.predict(features)).sum / numTrees
   }

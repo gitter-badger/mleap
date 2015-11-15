@@ -1,6 +1,7 @@
 package org.apache.mleap.runtime.transformer
 
 import org.apache.mleap.core.feature.StringIndexer
+import org.apache.mleap.runtime.transformer.builder.TransformBuilder
 import org.apache.mleap.runtime.types.{StructType, StringType, StructField, DoubleType}
 import org.apache.mleap.runtime._
 
@@ -12,18 +13,10 @@ import scala.util.Try
 case class StringIndexerModel(inputCol: String,
                               outputCol: String,
                               indexer: StringIndexer) extends Transformer {
-  override def calculateSchema(calc: SchemaCalculator): Try[SchemaCalculator] = {
-    calc.withInputField(inputCol, StringType)
-      .flatMap(_.withOutputField(outputCol, DoubleType))
-  }
-
-  override def transform(features: LeapFrame): LeapFrame = {
-    val inputIndex = features.schema.indexOf(inputCol)
-    val index = {
-      (row: Row) =>
-        indexer(row(inputIndex).toString)
+  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+    builder.withInput(inputCol, StringType).flatMap {
+      case (b, inputIndex) =>
+        b.endWithOutput(outputCol, DoubleType)(row => indexer(row.getAs[String](inputIndex)))
     }
-
-    features.withFeature(StructField(outputCol, DoubleType), index)
   }
 }
