@@ -10,7 +10,8 @@ import scala.util.{Failure, Success, Try}
   */
 case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
                                     input: Map[String, StructField] = Map(),
-                                    output: Map[String, StructField] = Map()) extends TransformBuilder[TransformerSchemaBuilder] {
+                                    output: Map[String, StructField] = Map(),
+                                    dropped: Boolean = false) extends TransformBuilder[TransformerSchemaBuilder] {
   def build(): TransformerSchema = {
     val inputSchema = StructType(input.values.toSeq)
     val outputSchema = StructType(input.values.toSeq)
@@ -26,6 +27,8 @@ case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
       } else {
         Invalid(otherDataType)
       }
+    } else if(dropped) {
+      Dropped
     } else {
       Valid
     }
@@ -36,6 +39,8 @@ case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
                                            dataType: DataType): Try[(TransformerSchemaBuilder, Int)] = {
     if(schema.contains(name)) {
       Success(this, schema.indexOf(name))
+    } else if(dropped) {
+      Failure(new Error(s"Field $name was dropped"))
     } else {
       val field = StructField(name, dataType)
       val schema2 = StructType(schema.fields :+ field)
@@ -57,5 +62,9 @@ case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
         output = output + (name -> field)),
         schema2.indexOf(name))
     }
+  }
+
+  override def withSelectInternal(schema: StructType): Try[TransformerSchemaBuilder] = {
+    Success(copy(schema = schema, output = Map(), dropped = true))
   }
 }

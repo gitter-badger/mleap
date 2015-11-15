@@ -14,6 +14,13 @@ trait LeapFrame {
   def withFeature(field: StructField, f: (Row) => Any): LeapFrame
   def toLocal: LocalLeapFrame
 }
+object LeapFrame {
+  val empty: LeapFrame = LocalLeapFrame.empty
+}
+
+object LocalLeapFrame {
+  val empty: LocalLeapFrame = LocalLeapFrame(StructType.empty, ArrayDataset.empty)
+}
 
 case class LocalLeapFrame(schema: StructType, dataset: ArrayDataset) extends LeapFrame {
   override def toLocal: LocalLeapFrame = this

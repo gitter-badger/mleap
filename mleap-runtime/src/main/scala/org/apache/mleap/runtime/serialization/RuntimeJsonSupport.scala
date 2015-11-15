@@ -92,7 +92,7 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
     }
   }
 
-  implicit val mleapArrayDatasetFormat = jsonFormat1(ArrayDataset)
-  implicit val mleapLocalLeapFrameFormat = jsonFormat2(LocalLeapFrame)
+  implicit val mleapArrayDatasetFormat = jsonFormat1(ArrayDataset.apply)
+  implicit val mleapLocalLeapFrameFormat = jsonFormat2(LocalLeapFrame.apply)
 }
 object RuntimeJsonSupport extends RuntimeJsonSupport

@@ -1,7 +1,7 @@
 package org.apache.mleap.runtime.transformer.builder
 
 import org.apache.mleap.runtime.{Row, LeapFrame}
-import org.apache.mleap.runtime.types.{DataType, StructField}
+import org.apache.mleap.runtime.types.{StructType, DataType, StructField}
 
 import scala.util.{Success, Try}
 
@@ -30,5 +30,9 @@ case class LeapFrameBuilder(frame: LeapFrame) extends TransformBuilder[LeapFrame
                                            (o: (Row) => Any): Try[(LeapFrameBuilder, Int)] = {
     val frame2 = frame.withFeature(StructField(name, dataType), o)
     Success((LeapFrameBuilder(frame2), frame2.schema.indexOf(name)))
+  }
+
+  override def withSelectInternal(schema: StructType): Try[LeapFrameBuilder] = {
+    Success(LeapFrameBuilder(frame.select(schema.fields.map(_.name): _*)))
   }
 }
