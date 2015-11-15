@@ -36,6 +36,16 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
 
   implicit val mleapStructTypeFormat = jsonFormat[Seq[StructField], StructType](StructType.apply, "fields")
 
+  implicit val mleapTransformerFormat = rootFormat(lazyFormat(MleapTransformerFormat()))
+  private implicit val mleapLinearRegressionModelFormat = TypedFormat[LinearRegressionModel](Transformer.linearRegressionModelName, jsonFormat3(LinearRegressionModel))
+  private implicit val mleapOneHotEncoderModelFormat = TypedFormat[OneHotEncoderModel](Transformer.oneHotEncoderModelName, jsonFormat3(OneHotEncoderModel))
+  private implicit val mleapOutputSelectorFormat = TypedFormat[OutputSelector](Transformer.outputSelectorName, jsonFormat1(OutputSelector))
+  private implicit val mleapPipelineModelFormat = TypedFormat[PipelineModel](Transformer.pipelineModelName, jsonFormat1(PipelineModel))
+  private implicit val mleapRandomForestRegressionModelFormat = TypedFormat[RandomForestRegressionModel](Transformer.randomForestRegressionModelName, jsonFormat3(RandomForestRegressionModel))
+  private implicit val mleapStandardScalerModelFormat = TypedFormat[StandardScalerModel](Transformer.standardScalerModelName, jsonFormat3(StandardScalerModel))
+  private implicit val mleapStringIndexerModelFormat = TypedFormat[StringIndexerModel](Transformer.stringIndexerModelName, jsonFormat3(StringIndexerModel))
+  private implicit val mleapVectorAssemblerModelFormat = TypedFormat[VectorAssemblerModel](Transformer.vectorAssemblerModelName, jsonFormat[StructType, String, VectorAssemblerModel](VectorAssemblerModel, "inputSchema", "outputCol"))
+
   private[mleap] case class MleapTransformerFormat() extends RootJsonFormat[Transformer] {
     override def write(obj: Transformer): JsValue = obj match {
       case obj: LinearRegressionModel => obj.toJson
@@ -61,17 +71,6 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
       }
     }
   }
-
-  implicit val mleapTransformerFormat = rootFormat(lazyFormat(MleapTransformerFormat()))
-
-  private implicit val mleapLinearRegressionModelFormat = TypedFormat[LinearRegressionModel](Transformer.linearRegressionModelName, jsonFormat3(LinearRegressionModel))
-  private implicit val mleapOneHotEncoderModelFormat = TypedFormat[OneHotEncoderModel](Transformer.oneHotEncoderModelName, jsonFormat3(OneHotEncoderModel))
-  private implicit val mleapOutputSelectorFormat = TypedFormat[OutputSelector](Transformer.outputSelectorName, jsonFormat1(OutputSelector))
-  private implicit val mleapPipelineModelFormat = TypedFormat[PipelineModel](Transformer.pipelineModelName, jsonFormat1(PipelineModel))
-  private implicit val mleapRandomForestRegressionModelFormat = TypedFormat[RandomForestRegressionModel](Transformer.randomForestRegressionModelName, jsonFormat3(RandomForestRegressionModel))
-  private implicit val mleapStandardScalerModelFormat = TypedFormat[StandardScalerModel](Transformer.standardScalerModelName, jsonFormat3(StandardScalerModel))
-  private implicit val mleapStringIndexerModelFormat = TypedFormat[StringIndexerModel](Transformer.stringIndexerModelName, jsonFormat3(StringIndexerModel))
-  private implicit val mleapVectorAssemblerModelFormat = TypedFormat[VectorAssemblerModel](Transformer.vectorAssemblerModelName, jsonFormat[StructType, String, VectorAssemblerModel](VectorAssemblerModel, "inputSchema", "outputCol"))
 
   implicit object MleapRowFormat extends RootJsonFormat[Row] {
     override def write(obj: Row): JsValue = {
