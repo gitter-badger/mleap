@@ -1,6 +1,6 @@
 package org.apache.mleap.runtime.transformer.builder
 
-import org.apache.mleap.runtime.Row
+import org.apache.mleap.runtime.{TransformerSchema, Row}
 import org.apache.mleap.runtime.types.{StructType, DataType, StructField}
 
 import scala.util.{Failure, Success, Try}
@@ -11,6 +11,13 @@ import scala.util.{Failure, Success, Try}
 case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
                                     input: Map[String, StructField] = Map(),
                                     output: Map[String, StructField] = Map()) extends TransformBuilder[TransformerSchemaBuilder] {
+  def build(): TransformerSchema = {
+    val inputSchema = StructType(input.values.toSeq)
+    val outputSchema = StructType(input.values.toSeq)
+
+    TransformerSchema(inputSchema, outputSchema)
+  }
+
   override def validateField(name: String, dataType: DataType): Validation = {
     if(schema.contains(name)) {
       val otherDataType = schema(name).dataType
@@ -23,7 +30,7 @@ case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
       Valid
     }
   }
-  override def hasField(name: String): Boolean = available.contains(name)
+  override def hasField(name: String): Boolean = schema.contains(name)
 
   override protected def withInputInternal(name: String,
                                            dataType: DataType): Try[(TransformerSchemaBuilder, Int)] = {

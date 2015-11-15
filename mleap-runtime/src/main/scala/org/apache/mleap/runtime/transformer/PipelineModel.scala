@@ -11,6 +11,6 @@ import scala.util.Try
 case class PipelineModel(stages: Seq[Transformer]) extends Transformer {
 
   override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
-    stages.foldLeft(Try(builder))((b, stage) => b.flatMap(stage.transform))
+    stages.foldLeft(Try(builder))((b, stage) => b.flatMap(stage.transform[T]))
   }
 }
