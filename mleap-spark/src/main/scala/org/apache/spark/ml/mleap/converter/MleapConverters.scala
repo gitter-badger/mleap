@@ -169,12 +169,10 @@ case class DataFrameToMleap(dataset: DataFrame) {
 
     val mleapFieldSet = allFieldSet & fieldSet
     val mleapFields = mleapFieldSet.map(dataset.schema.apply).toArray
-    val sparkFields = (allFieldSet -- fieldSet).map(dataset.schema.apply).toArray
 
     val mleapIndices = mleapFields.map(f => dataset.schema.indexOf(f.name))
-    val sparkIndices = sparkFields.map(f => dataset.schema.indexOf(f.name))
 
-    val sparkSchema = StructType(sparkFields)
+    val sparkSchema = dataset.schema
     val mleapSchema = StructType(mleapFields).toMleap
 
     // cast MLeap field numeric types to DoubleTypes
@@ -201,7 +199,7 @@ case class DataFrameToMleap(dataset: DataFrame) {
           case value => value
         }
         val mleapRow = MleapRow(mleapValues: _*)
-        val sparkRow = sparkIndices.map(row.get)
+        val sparkRow = row.toSeq
         (mleapRow, sparkRow)
     }
 
@@ -239,16 +237,17 @@ case class RowToSpark(row: MleapRow) {
 case class LeapFrameToSpark[T <: LeapFrame[T]](frame: LeapFrame[T]) {
   def toSpark(implicit sqlContext: SQLContext): DataFrame = frame match {
     case frame: SparkLeapFrame =>
-      val rows = frame.dataset.rdd.map {
+      val outputFrame = frame.select(frame.outputFields.toSeq: _*)
+      val rows = outputFrame.dataset.rdd.map {
         case (mleapRow, sparkData) =>
           val mleapData = mleapRow.toArray.map {
             case value: MleapVector => value.toSpark
             case value => value
           }
 
-          Row(mleapData ++ sparkData: _*)
+          Row(sparkData ++ mleapData: _*)
       }
-      val schema = StructType(frame.schema.toSpark.fields ++ frame.sparkSchema.fields)
+      val schema = StructType(outputFrame.schema.toSpark.fields ++ outputFrame.sparkSchema.fields)
       sqlContext.createDataFrame(rows, schema)
     case _ =>
       val schema = frame.schema.toSpark

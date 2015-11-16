@@ -6,7 +6,7 @@ import org.apache.spark.rdd.RDD
 /**
  * Created by hwilkins on 11/6/15.
  */
-case class SparkDataset(rdd: RDD[(Row, Array[Any])]) extends Dataset {
+case class SparkDataset(rdd: RDD[(Row, Seq[Any])]) extends Dataset {
   override def map(f: (Row) => Row): SparkDataset = {
     val rdd2 = rdd.map {
       case (row, sparkRow) => (f(row), sparkRow)

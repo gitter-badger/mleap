@@ -9,7 +9,8 @@ import org.apache.spark.sql.types
   */
 case class SparkLeapFrame(schema: StructType,
                           sparkSchema: types.StructType,
-                          dataset: SparkDataset) extends LeapFrame[SparkLeapFrame] {
+                          dataset: SparkDataset,
+                          outputFields: Set[String] = Set()) extends LeapFrame[SparkLeapFrame] {
   override def toLocal: LocalLeapFrame = LocalLeapFrame(schema, ArrayDataset(dataset.rdd.map(_._1).collect))
 
   override def select(fields: String*): SparkLeapFrame = {
@@ -17,7 +18,10 @@ case class SparkLeapFrame(schema: StructType,
     val schema2 = schema.select(indices: _*)
     val dataset2 = dataset.map(_.select(indices: _*))
 
-    SparkLeapFrame(schema2, sparkSchema, dataset2)
+    SparkLeapFrame(schema2,
+      sparkSchema,
+      dataset2,
+      outputFields = outputFields & fields.toSet)
   }
 
   def withFeature(field: StructField, f: (Row) => Any): SparkLeapFrame = {
@@ -26,6 +30,9 @@ case class SparkLeapFrame(schema: StructType,
       row => row.withValue(f(row))
     }
 
-    SparkLeapFrame(schema2, sparkSchema, dataset2)
+    SparkLeapFrame(schema2,
+      sparkSchema,
+      dataset2,
+      outputFields = outputFields + field.name)
   }
 }
