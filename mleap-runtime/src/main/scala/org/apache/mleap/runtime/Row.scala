@@ -5,11 +5,7 @@ import org.apache.mleap.core.linalg.Vector
 /**
  * Created by hwilkins on 11/2/15.
  */
-object Row {
-  def apply(data: Any *): Row = Row(data.toArray)
-}
-
-case class Row(data: Array[Any]) {
+case class Row(data: Any *) {
   private[mleap] def apply(index: Int): Any = get(index)
   private[mleap] def get(index: Int): Any = data(index)
 

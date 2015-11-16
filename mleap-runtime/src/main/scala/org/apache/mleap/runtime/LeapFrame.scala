@@ -6,26 +6,19 @@ import org.apache.mleap.runtime.types.{StructField, StructType}
 /**
   * Created by hwilkins on 11/2/15.
   */
-trait LeapFrame {
+trait LeapFrame[T <: LeapFrame[T]] {
   def schema: StructType
   def dataset: Dataset
 
-  def select(fields: String *): LeapFrame
-  def withFeature(field: StructField, f: (Row) => Any): LeapFrame
+  def select(fields: String *): T
+  def withFeature(field: StructField, f: (Row) => Any): T
   def toLocal: LocalLeapFrame
 }
-object LeapFrame {
-  val empty: LeapFrame = LocalLeapFrame.empty
-}
 
-object LocalLeapFrame {
-  val empty: LocalLeapFrame = LocalLeapFrame(StructType.empty, ArrayDataset.empty)
-}
-
-case class LocalLeapFrame(schema: StructType, dataset: ArrayDataset) extends LeapFrame {
+case class LocalLeapFrame(schema: StructType, dataset: ArrayDataset) extends LeapFrame[LocalLeapFrame] {
   override def toLocal: LocalLeapFrame = this
 
-  override def select(fields: String*): LocalLeapFrame = {
+  override def select(fields: String *): LocalLeapFrame = {
     val indices = fields.map(schema.indexOf)
     val schema2 = schema.select(indices: _*)
     val dataset2 = dataset.map(_.select(indices: _*))

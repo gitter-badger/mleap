@@ -2,23 +2,22 @@ package org.apache.mleap.spark
 
 import org.apache.mleap.runtime._
 import org.apache.mleap.runtime.types.{StructField, StructType}
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types
 
 /**
   * Created by hwilkins on 11/12/15.
   */
 case class SparkLeapFrame(schema: StructType,
-                          dataset: SparkDataset,
-                          dataFrame: DataFrame) extends LeapFrame {
-  override def toLocal: LocalLeapFrame = LocalLeapFrame(schema, ArrayDataset(dataset.rdd.collect))
+                          sparkSchema: types.StructType,
+                          dataset: SparkDataset) extends LeapFrame[SparkLeapFrame] {
+  override def toLocal: LocalLeapFrame = LocalLeapFrame(schema, ArrayDataset(dataset.rdd.map(_._1).collect))
 
   override def select(fields: String*): SparkLeapFrame = {
     val indices = fields.map(schema.indexOf)
     val schema2 = schema.select(indices: _*)
     val dataset2 = dataset.map(_.select(indices: _*))
 
-    SparkLeapFrame(schema2, dataset2, dataFrame)
+    SparkLeapFrame(schema2, sparkSchema, dataset2)
   }
 
   def withFeature(field: StructField, f: (Row) => Any): SparkLeapFrame = {
@@ -27,6 +26,6 @@ case class SparkLeapFrame(schema: StructType,
       row => row.withValue(f(row))
     }
 
-    SparkLeapFrame(schema2, dataset2, dataFrame)
+    SparkLeapFrame(schema2, sparkSchema, dataset2)
   }
 }

@@ -1,9 +1,8 @@
 package org.apache.mleap.runtime.transformer
 
-import org.apache.mleap.core.linalg.Vector
 import org.apache.mleap.core.regression.RandomForestRegression
 import org.apache.mleap.runtime.transformer.builder.TransformBuilder
-import org.apache.mleap.runtime.types.{VectorType, DoubleType, StructField}
+import org.apache.mleap.runtime.types.{VectorType, DoubleType}
 import org.apache.mleap.runtime._
 
 import scala.util.Try

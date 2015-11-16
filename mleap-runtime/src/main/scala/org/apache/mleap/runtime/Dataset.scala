@@ -5,10 +5,7 @@ package org.apache.mleap.runtime
   */
 trait Dataset extends Serializable {
   def map(f: (Row) => Row): Dataset
-}
-
-object ArrayDataset {
-  val empty: ArrayDataset = ArrayDataset(Array())
+  def toArray: Array[Row]
 }
 
 case class ArrayDataset(data: Array[Row]) extends Dataset {
@@ -16,4 +13,6 @@ case class ArrayDataset(data: Array[Row]) extends Dataset {
     val data2 = data.map(f)
     copy(data = data2)
   }
+
+  override def toArray: Array[Row] = data
 }

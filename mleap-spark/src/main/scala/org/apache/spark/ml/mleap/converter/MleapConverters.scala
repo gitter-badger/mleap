@@ -2,7 +2,7 @@ package org.apache.spark.ml.mleap.converter
 
 import org.apache.mleap.core
 import org.apache.mleap.core.linalg.{DenseVector => MleapDenseVector, SparseVector => MleapSparseVector, Vector => MleapVector}
-import org.apache.mleap.runtime.{LeapFrame, Row, Transformer => MleapTransformer, transformer => tform, types}
+import org.apache.mleap.runtime.{LeapFrame, Row => MleapRow, Transformer => MleapTransformer, transformer => tform, types}
 import org.apache.mleap.spark.{SparkLeapFrame, SparkDataset}
 import org.apache.spark.SparkException
 import org.apache.spark.ml.feature.StandardScalerModel
@@ -11,7 +11,7 @@ import org.apache.spark.ml.regression.{RandomForestRegressionModel, DecisionTree
 import org.apache.spark.ml.tree._
 import org.apache.spark.ml.{PipelineModel, Transformer}
 import org.apache.spark.mllib.linalg._
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{Row, SQLContext, DataFrame}
 import org.apache.spark.sql.types._
 
 import scala.util.{Success, Try}
@@ -30,6 +30,10 @@ object MleapConverters {
   implicit def splitToMleap(split: Split): SplitToMleap = SplitToMleap(split)
   implicit def transformerToMleap(transformer: Transformer): TransformerToMleap = TransformerToMleap(transformer)
   implicit def structTypeToMleap(schema: StructType): StructTypeToMleap = StructTypeToMleap(schema)
+
+  implicit def rowToSpark(row: MleapRow): RowToSpark = RowToSpark(row)
+  implicit def structTypeToSpark(schema: types.StructType): StructTypeToSpark = StructTypeToSpark(schema)
+  implicit def leapFrameToSpark[T <: LeapFrame[T]](frame: T): LeapFrameToSpark[T] = LeapFrameToSpark[T](frame)
 }
 
 import MleapConverters._
@@ -133,7 +137,7 @@ case class StructTypeToMleap(schema: StructType) {
         val dataType = sparkType match {
           case _: NumericType | BooleanType => types.DoubleType
           case _: StringType => types.StringType
-          case _: org.apache.spark.mllib.linalg.VectorUDT => types.VectorType
+          case _: VectorUDT => types.VectorType
           case _ => throw new SparkException(s"unsupported MLeap datatype: $sparkTypeName")
         }
 
@@ -145,33 +149,96 @@ case class StructTypeToMleap(schema: StructType) {
 
 case class DataFrameToMleap(dataset: DataFrame) {
   def toMleap(fieldNames: String *): SparkLeapFrame = {
-    val fieldSet = Set(fieldNames: _*)
-    val convertFields = dataset.schema.fields.filter(field => fieldSet.contains(field.name))
-    val sparkFields = dataset.schema.fields.map(_.name).toSet -- fieldSet
+    val fieldSet = fieldNames.toSet
+    val allFieldSet = dataset.schema.fields.map(_.name).toSet
 
-    val schema = StructType(convertFields).toMleap
+    val mleapFieldSet = allFieldSet & fieldSet
+    val mleapFields = mleapFieldSet.map(dataset.schema.apply).toArray
+    val sparkFields = (allFieldSet -- fieldSet).map(dataset.schema.apply).toArray
 
-    // cast all numeric types to Doubles
-    val cols = schema.fields.map {
+    val mleapIndices = mleapFields.map(f => dataset.schema.indexOf(f.name))
+    val sparkIndices = sparkFields.map(f => dataset.schema.indexOf(f.name))
+
+    val sparkSchema = StructType(sparkFields)
+    val mleapSchema = StructType(mleapFields).toMleap
+
+    // cast MLeap field numeric types to DoubleTypes
+    val cols = dataset.schema.fields.map {
       field =>
-        field.dataType match {
-          case types.DoubleType => dataset.col(field.name).cast(DoubleType)
-          case _ => dataset.col(field.name)
+        if(mleapFieldSet.contains(field.name)) {
+          field.dataType match {
+            case _: NumericType | BooleanType => dataset.col(field.name).cast(DoubleType)
+            case _ => dataset.col(field.name)
+          }
+        } else {
+          dataset.col(field.name)
         }
     }
     val castDataset = dataset.select(cols: _*)
-    val leapRDD = castDataset.map {
+
+    val rdd = castDataset.rdd.map {
       row =>
-        val values = row.toSeq.toArray.map {
+        // finish converting Spark data structure to MLeap
+        // TODO: make a Spark UDT for MleapVector and just
+        // cast like we do for numeric types
+        val mleapValues = mleapIndices.map(row.get).map {
           case value: Vector => value.toMleap
           case value => value
         }
-        Row(values: _*)
+        val mleapRow = MleapRow(mleapValues: _*)
+        val sparkRow = sparkIndices.map(row.get)
+        (mleapRow, sparkRow)
     }
 
-    val sparkDataFrame = dataset.select(sparkFields.toSeq.map(dataset.col): _*)
-    val leapDataset = SparkDataset(leapRDD)
+    val mleapDataset = SparkDataset(rdd)
+    SparkLeapFrame(mleapSchema, sparkSchema, mleapDataset)
+  }
+}
 
-    SparkLeapFrame(schema, leapDataset, sparkDataFrame)
+case class StructTypeToSpark(schema: types.StructType) {
+  def toSpark: StructType = {
+    val fields = schema.fields.map {
+      field =>
+        field.dataType match {
+          case types.DoubleType => StructField(field.name, DoubleType)
+          case types.StringType => StructField(field.name, StringType)
+          case types.VectorType => StructField(field.name, new VectorUDT())
+        }
+    }
+
+    StructType(fields)
+  }
+}
+
+case class RowToSpark(row: MleapRow) {
+  def toSpark: Row = {
+    val values = row.toArray.map {
+      case value: MleapVector => value.toSpark
+      case value => value
+    }
+
+    Row(values: _*)
+  }
+}
+
+case class LeapFrameToSpark[T <: LeapFrame[T]](frame: LeapFrame[T]) {
+  def toSpark(implicit sqlContext: SQLContext): DataFrame = frame match {
+    case frame: SparkLeapFrame =>
+      val rows = frame.dataset.rdd.map {
+        case (mleapRow, sparkData) =>
+          val mleapData = mleapRow.toArray.map {
+            case value: MleapVector => value.toSpark
+            case value => value
+          }
+
+          Row(mleapData ++ sparkData: _*)
+      }
+      val schema = StructType(frame.schema.toSpark.fields ++ frame.sparkSchema.fields)
+      sqlContext.createDataFrame(rows, schema)
+    case _ =>
+      val schema = frame.schema.toSpark
+      val rows = frame.dataset.toArray.map(_.toSpark)
+      val rdd = sqlContext.sparkContext.parallelize(rows)
+      sqlContext.createDataFrame(rdd, schema)
   }
 }
