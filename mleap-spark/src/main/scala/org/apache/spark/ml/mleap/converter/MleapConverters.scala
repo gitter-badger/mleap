@@ -14,8 +14,6 @@ import org.apache.spark.mllib.linalg._
 import org.apache.spark.sql.{Row, SQLContext, DataFrame}
 import org.apache.spark.sql.types._
 
-import scala.util.{Success, Try}
-
 /**
   * Created by hwilkins on 11/5/15.
   */
@@ -34,6 +32,10 @@ object MleapConverters {
   implicit def rowToSpark(row: MleapRow): RowToSpark = RowToSpark(row)
   implicit def structTypeToSpark(schema: types.StructType): StructTypeToSpark = StructTypeToSpark(schema)
   implicit def leapFrameToSpark[T <: LeapFrame[T]](frame: T): LeapFrameToSpark[T] = LeapFrameToSpark[T](frame)
+
+  implicit def leapFrameToSparkConvert[T <: LeapFrame[T]](frame: T)
+                                                         (implicit sqlContext: SQLContext): DataFrame = frame.toSpark
+  implicit def dataFrameToLeapFrame(dataFrame: DataFrame): SparkLeapFrame = dataFrame.toMleap
 }
 
 import MleapConverters._
@@ -148,6 +150,19 @@ case class StructTypeToMleap(schema: StructType) {
 }
 
 case class DataFrameToMleap(dataset: DataFrame) {
+  def toMleap: SparkLeapFrame = {
+    val mleapFields = dataset.schema.fields.filter {
+      field =>
+        field.dataType match {
+          case _: NumericType | BooleanType | StringType => true
+          case _: VectorUDT => true
+          case _ => false
+        }
+    }
+
+    toMleap(mleapFields.map(_.name): _ *)
+  }
+
   def toMleap(fieldNames: String *): SparkLeapFrame = {
     val fieldSet = fieldNames.toSet
     val allFieldSet = dataset.schema.fields.map(_.name).toSet
