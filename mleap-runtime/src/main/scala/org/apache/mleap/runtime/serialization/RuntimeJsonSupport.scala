@@ -4,7 +4,7 @@ import org.apache.mleap.core.linalg.Vector
 import org.apache.mleap.core.serialization.CoreJsonSupport
 import org.apache.mleap.runtime.transformer._
 import org.apache.mleap.runtime.types.{DataType, StructField, StructType}
-import org.apache.mleap.runtime.{ArrayDataset, LocalLeapFrame, Row, Transformer}
+import org.apache.mleap.runtime._
 import spray.json.{DefaultJsonProtocol, _}
 
 import scala.language.implicitConversions
@@ -71,7 +71,7 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
 
   implicit object MleapRowFormat extends RootJsonFormat[Row] {
     override def write(obj: Row): JsValue = {
-      val values = obj.data.map {
+      val values = obj.toArray.map {
         case value: Double => JsNumber(value)
         case value: String => JsString(value)
         case value: Vector => value.toJson

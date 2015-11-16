@@ -10,9 +10,11 @@ import org.apache.spark.ml.mleap.{VectorAssemblerModel, OneHotEncoderModel}
 import org.apache.spark.ml.regression.{RandomForestRegressionModel, DecisionTreeRegressionModel, LinearRegressionModel}
 import org.apache.spark.ml.tree._
 import org.apache.spark.ml.{PipelineModel, Transformer}
-import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, Vectors}
+import org.apache.spark.mllib.linalg._
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
+
+import scala.util.{Success, Try}
 
 /**
   * Created by hwilkins on 11/5/15.
@@ -142,29 +144,34 @@ case class StructTypeToMleap(schema: StructType) {
 }
 
 case class DataFrameToMleap(dataset: DataFrame) {
-  def toMleap: LeapFrame = {
-    val schema = dataset.schema
+  def toMleap(fieldNames: String *): SparkLeapFrame = {
+    val fieldSet = Set(fieldNames: _*)
+    val convertFields = dataset.schema.fields.filter(field => fieldSet.contains(field.name))
+    val sparkFields = dataset.schema.fields.map(_.name).toSet -- fieldSet
+
+    val schema = StructType(convertFields).toMleap
 
     // cast all numeric types to Doubles
     val cols = schema.fields.map {
       field =>
         field.dataType match {
-          case _: NumericType | BooleanType => dataset.col(field.name).cast(DoubleType).as(field.name)
+          case types.DoubleType => dataset.col(field.name).cast(DoubleType)
           case _ => dataset.col(field.name)
         }
     }
     val castDataset = dataset.select(cols: _*)
-
     val leapRDD = castDataset.map {
       row =>
         val values = row.toSeq.toArray.map {
           case value: Vector => value.toMleap
-          case value: Double => value
-          case value: String => value
+          case value => value
         }
         Row(values: _*)
     }
+
+    val sparkDataFrame = dataset.select(sparkFields.toSeq.map(dataset.col): _*)
     val leapDataset = SparkDataset(leapRDD)
-    SparkLeapFrame(schema.toMleap, leapDataset)
+
+    SparkLeapFrame(schema, leapDataset, sparkDataFrame)
   }
 }
