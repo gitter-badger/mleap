@@ -153,48 +153,42 @@ case class StructTypeToMleap(schema: StructType) {
 
 case class MleapTransformerWrapper(transformer: MleapTransformer) {
   def sparkTransform(dataset: DataFrame): DataFrame = {
-    transformer.transform(dataset.toMleap(transformer)).get.toSpark(dataset.sqlContext)
+    transformer.transform(dataset.toMleap(transformer.schema.input)).get.toSpark(dataset.sqlContext)
   }
 }
 
 case class DataFrameToMleap(dataset: DataFrame) {
   def toMleap: SparkLeapFrame = {
-    val mleapFields = dataset.schema.fields.filter {
+    val mleapFields = dataset.schema.fields.flatMap {
       field =>
         field.dataType match {
-          case _: NumericType | BooleanType | StringType => true
-          case _: VectorUDT => true
-          case _ => false
+          case _: NumericType | BooleanType | StringType => Seq(types.StructField(field.name, types.DoubleType))
+          case _: VectorUDT => Seq(types.StructField(field.name, types.VectorType))
+          case _: StringType => Seq(types.StructField(field.name, types.StringType))
+          case _ => Seq()
         }
     }
 
-    toMleap(mleapFields.map(_.name): _ *)
+    toMleap(types.StructType(mleapFields))
   }
 
-  def toMleap(transformer: MleapTransformer): SparkLeapFrame = toMleap(transformer.schema().input.fields.map(_.name): _*)
-
-  def toMleap(fieldNames: String *): SparkLeapFrame = {
-    val fieldSet = fieldNames.toSet
-    val allFieldSet = dataset.schema.fields.map(_.name).toSet
-
-    val mleapFieldSet = allFieldSet & fieldSet
-    val mleapFields = mleapFieldSet.map(dataset.schema.apply).toArray
-
+  def toMleap(schema: types.StructType): SparkLeapFrame = {
     val sparkSchema = dataset.schema
-    val mleapSchema = StructType(mleapFields).toMleap
 
     // cast MLeap field numeric types to DoubleTypes
-    val mleapCols = mleapFields.map {
+    val mleapCols = schema.fields.map {
       field =>
         field.dataType match {
-          case _: NumericType | BooleanType => dataset.col(field.name).cast(DoubleType).as(s"mleap.${field.name}")
-          case _ => dataset.col(field.name).as(s"mleap.${field.name}")
+          case types.DoubleType => dataset.col(field.name).cast(DoubleType).as(s"mleap.${field.name}")
+          case types.StringType => dataset.col(field.name).cast(StringType).as(s"mleap.${field.name}")
+          case types.VectorType => dataset.col(field.name).as(s"mleap.${field.name}")
         }
     }
-    val castDataset = dataset.select(dataset.col("*") +: mleapCols: _*)
+    val cols = Seq(dataset.col("*")) ++ mleapCols
+    val castDataset = dataset.select(cols: _*)
 
     val sparkIndices: Seq[Int] = sparkSchema.fields.indices
-    val mleapIndices = (sparkSchema.fields.length until (sparkSchema.fields.length + mleapSchema.fields.length)).toArray
+    val mleapIndices = (sparkSchema.fields.length until (sparkSchema.fields.length + schema.fields.length)).toArray
 
     val rdd = castDataset.rdd.map {
       row =>
@@ -211,7 +205,7 @@ case class DataFrameToMleap(dataset: DataFrame) {
     }
 
     val mleapDataset = SparkDataset(rdd)
-    SparkLeapFrame(mleapSchema, sparkSchema, mleapDataset)
+    SparkLeapFrame(schema, sparkSchema, mleapDataset)
   }
 }
 

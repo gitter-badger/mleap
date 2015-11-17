@@ -11,7 +11,7 @@ object StructType {
   def withFields(fields: StructField *): StructType = StructType(fields.toSeq)
 }
 
-case class StructType(fields: Seq[StructField]) {
+case class StructType(fields: Seq[StructField]) extends Serializable {
   val nameToIndex: Map[String, Int] = fields.map(_.name).zipWithIndex.toMap
   val nameToField: Map[String, StructField] = fields.map(_.name).zip(fields).toMap
 
