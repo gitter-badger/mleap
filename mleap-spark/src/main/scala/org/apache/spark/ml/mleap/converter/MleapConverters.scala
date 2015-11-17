@@ -36,6 +36,8 @@ object MleapConverters {
   implicit def leapFrameToSparkConvert[T <: LeapFrame[T]](frame: T)
                                                          (implicit sqlContext: SQLContext): DataFrame = frame.toSpark
   implicit def dataFrameToLeapFrame(dataFrame: DataFrame): SparkLeapFrame = dataFrame.toMleap
+
+  implicit def mleapTransformerWrapper(transformer: MleapTransformer): MleapTransformerWrapper = MleapTransformerWrapper(transformer)
 }
 
 import MleapConverters._
@@ -146,6 +148,12 @@ case class StructTypeToMleap(schema: StructType) {
         types.StructField(field.name, dataType)
     }
     types.StructType(leapFields)
+  }
+}
+
+case class MleapTransformerWrapper(transformer: MleapTransformer) {
+  def sparkTransform(dataset: DataFrame): DataFrame = {
+    transformer.transform(dataset.toMleap).get.toSpark(dataset.sqlContext)
   }
 }
 
