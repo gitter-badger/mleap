@@ -241,10 +241,12 @@ case class RowToSpark(row: MleapRow) {
   }
 }
 
-case class LeapFrameToSpark[T <: LeapFrame[T]](frame: LeapFrame[T]) {
+case class LeapFrameToSpark[T <: LeapFrame[T]](frame: T) {
   def toSpark(implicit sqlContext: SQLContext): DataFrame = frame match {
     case frame: SparkLeapFrame =>
-      val outputFrame = frame.select(frame.outputFields.toSeq: _*)
+      // must explicitly cast or there are compile errors
+      val frame2 = frame.asInstanceOf[SparkLeapFrame]
+      val outputFrame = frame2.select(frame2.outputFields.toSeq: _*).get
       val rows = outputFrame.dataset.rdd.map {
         case (mleapRow, sparkData) =>
           val mleapData = mleapRow.toArray.map {

@@ -1,38 +1,39 @@
 package org.apache.mleap.runtime.transformer.builder
 
 import org.apache.mleap.runtime.{Row, LeapFrame}
-import org.apache.mleap.runtime.types.{StructType, DataType, StructField}
+import org.apache.mleap.runtime.types.{DataType, StructField}
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by hwilkins on 11/15/15.
   */
 case class LeapFrameBuilder[T <: LeapFrame[T]](frame: T) extends TransformBuilder[LeapFrameBuilder[T]] {
-  override def validateField(name: String, dataType: DataType): Validation = {
-    val otherDataType = frame.schema(name).dataType
-    if(dataType == otherDataType) {
-      Valid
-    } else {
-      Invalid(otherDataType)
+  override def withInput(name: String, dataType: DataType): Try[(LeapFrameBuilder[T], Int)] = {
+    frame.schema(name) match {
+      case Some(field) =>
+        if(field.dataType == dataType) {
+          Success(this, frame.schema.indexOf(name).get)
+        } else {
+          Failure(new Error(s"Field $name expected data type ${field.dataType} but found $dataType"))
+        }
+      case None =>
+        Failure(new Error(s"Field $name does not exist"))
     }
   }
 
-  override def hasField(name: String): Boolean = frame.schema.contains(name)
-
-  override protected def withInputInternal(name: String,
-                                           dataType: DataType): Try[(LeapFrameBuilder[T], Int)] = {
-    Success((this, frame.schema.indexOf(name)))
+  override def withOutput(name: String, dataType: DataType)
+                         (o: (Row) => Any): Try[(LeapFrameBuilder[T], Int)] = {
+    frame.withField(StructField(name, dataType), o).flatMap {
+      frame2 => Success((copy(frame = frame2), frame2.schema.indexOf(name).get))
+    }
   }
 
-  override protected def withOutputInternal(name: String,
-                                            dataType: DataType)
-                                           (o: (Row) => Any): Try[(LeapFrameBuilder[T], Int)] = {
-    val frame2 = frame.withFeature(StructField(name, dataType), o)
-    Success((LeapFrameBuilder(frame2), frame2.schema.indexOf(name)))
+  override def withSelect(fieldNames: Seq[String]): Try[LeapFrameBuilder[T]] = {
+    frame.select(fieldNames: _*).map(LeapFrameBuilder.apply)
   }
 
-  override def withSelectInternal(schema: StructType): Try[LeapFrameBuilder[T]] = {
-    Success(LeapFrameBuilder(frame.select(schema.fields.map(_.name): _*)))
+  override def withDrop(name: String): Try[LeapFrameBuilder[T]] = {
+    frame.dropField(name).map(LeapFrameBuilder.apply)
   }
 }

@@ -10,61 +10,59 @@ import scala.util.{Failure, Success, Try}
   */
 case class TransformerSchemaBuilder(schema: StructType = StructType.empty,
                                     input: Map[String, StructField] = Map(),
-                                    output: Map[String, StructField] = Map(),
-                                    dropped: Boolean = false) extends TransformBuilder[TransformerSchemaBuilder] {
+                                    drops: Set[String] = Set(),
+                                    selected: Boolean = false) extends TransformBuilder[TransformerSchemaBuilder] {
   def build(): TransformerSchema = {
     val inputSchema = StructType(input.values.toSeq)
-    val outputSchema = StructType(input.values.toSeq)
 
-    TransformerSchema(inputSchema, outputSchema)
+    TransformerSchema(inputSchema, schema)
   }
 
-  override def validateField(name: String, dataType: DataType): Validation = {
+  override def withInput(name: String, dataType: DataType): Try[(TransformerSchemaBuilder, Int)] = {
     if(schema.contains(name)) {
-      val otherDataType = schema(name).dataType
-      if(dataType == otherDataType) {
-        Valid
-      } else {
-        Invalid(otherDataType)
-      }
-    } else if(dropped) {
-      Dropped
-    } else {
-      Valid
-    }
-  }
-  override def hasField(name: String): Boolean = schema.contains(name)
-
-  override protected def withInputInternal(name: String,
-                                           dataType: DataType): Try[(TransformerSchemaBuilder, Int)] = {
-    if(schema.contains(name)) {
-      Success(this, schema.indexOf(name))
-    } else if(dropped) {
+      Success(this, schema.indexOf(name).get)
+    } else if(selected || drops.contains(name)) {
       Failure(new Error(s"Field $name was dropped"))
     } else {
       val field = StructField(name, dataType)
       val schema2 = StructType(schema.fields :+ field)
-      Success(copy(schema = schema2,
-        input = input + (name -> field)),
-        schema2.indexOf(name))
+      val input2 = input + (name -> field)
+      val index = schema.fields.length
+      val builder = copy(schema = schema2, input = input2)
+
+      Success(builder, index)
     }
   }
 
-  override protected def withOutputInternal(name: String,
-                                            dataType: DataType)
-                                           (o: (Row) => Any): Try[(TransformerSchemaBuilder, Int)] = {
-    if(schema.contains(name)) {
-      Failure(new Error(s"Field $name is already in LeapFrame"))
-    } else {
-      val field = StructField(name, dataType)
-      val schema2 = StructType(schema.fields :+ field)
-      Success(copy(schema = schema2,
-        output = output + (name -> field)),
-        schema2.indexOf(name))
+  override def withOutput(name: String, dataType: DataType)
+                         (o: (Row) => Any): Try[(TransformerSchemaBuilder, Int)] = {
+    schema.indexOf(name) match {
+      case Some(index) =>
+        Failure(new Error(s"Field $name already exists"))
+      case None =>
+        val field = StructField(name, dataType)
+        val schema2 = StructType(schema.fields :+ field)
+        val drops2 = drops - name
+        val builder = copy(schema = schema2, drops = drops2)
+        val index = schema.fields.length
+
+        Success(builder, index)
     }
   }
 
-  override def withSelectInternal(schema: StructType): Try[TransformerSchemaBuilder] = {
-    Success(copy(schema = schema, output = Map(), dropped = true))
+  override def withSelect(fieldNames: Seq[String]): Try[TransformerSchemaBuilder] = {
+    schema.select(fieldNames: _*).map {
+      schema2 =>
+        TransformerSchemaBuilder(schema = schema2, input = input, selected = true)
+    }
+  }
+
+  override def withDrop(name: String): Try[TransformerSchemaBuilder] = {
+    schema.dropField(name).map {
+      schema2 =>
+        val drops2 = drops + name
+
+        copy(schema = schema2, drops = drops2)
+    }
   }
 }

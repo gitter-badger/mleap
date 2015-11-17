@@ -15,12 +15,18 @@ case class Row(data: Array[Any]) {
   def getString(index: Int): String = data(index).asInstanceOf[String]
   def getVector(index: Int): Vector = data(index).asInstanceOf[Vector]
 
+  def withValue(f: (Row) => Any): Row = withValue(f(this))
   def withValue(value: Any): Row = {
     Row(data :+ value)
   }
 
-  def select(indices: Int *): Row = {
+  def selectIndices(indices: Int *): Row = {
     val values = indices.toArray.map(data)
+    Row(values)
+  }
+
+  def dropIndex(index: Int): Row = {
+    val values = toArray.zipWithIndex.filter(_._2 != index).map(_._1)
     Row(values)
   }
 
