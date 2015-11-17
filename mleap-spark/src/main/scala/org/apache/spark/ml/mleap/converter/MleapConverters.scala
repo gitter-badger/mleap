@@ -1,6 +1,7 @@
 package org.apache.spark.ml.mleap.converter
 
 import org.apache.mleap.core
+import org.apache.mleap.spark.{VectorUDT => MleapVectorUDT}
 import org.apache.mleap.core.linalg.{DenseVector => MleapDenseVector, SparseVector => MleapSparseVector, Vector => MleapVector}
 import org.apache.mleap.runtime.{LeapFrame, Row => MleapRow, Transformer => MleapTransformer, transformer => tform, types}
 import org.apache.mleap.spark.{SparkLeapFrame, SparkDataset}
@@ -181,7 +182,7 @@ case class DataFrameToMleap(dataset: DataFrame) {
         field.dataType match {
           case types.DoubleType => dataset.col(field.name).cast(DoubleType).as(s"mleap.${field.name}")
           case types.StringType => dataset.col(field.name).cast(StringType).as(s"mleap.${field.name}")
-          case types.VectorType => dataset.col(field.name).as(s"mleap.${field.name}")
+          case types.VectorType => dataset.col(field.name).cast(new MleapVectorUDT()).as(s"mleap.${field.name}")
         }
     }
     val cols = Seq(dataset.col("*")) ++ mleapCols
@@ -195,10 +196,7 @@ case class DataFrameToMleap(dataset: DataFrame) {
         // finish converting Spark data structure to MLeap
         // TODO: make a Spark UDT for MleapVector and just
         // cast like we do for numeric types
-        val mleapValues = mleapIndices.map(row.get).map {
-          case value: Vector => value.toMleap
-          case value => value
-        }
+        val mleapValues = mleapIndices.map(row.get)
         val mleapRow = MleapRow(mleapValues)
         val sparkRow = sparkIndices.map(row.apply)
         (mleapRow, sparkRow)
