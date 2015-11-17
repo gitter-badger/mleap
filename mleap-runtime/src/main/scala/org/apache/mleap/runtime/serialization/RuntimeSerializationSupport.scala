@@ -8,7 +8,7 @@ import org.apache.mleap.runtime.Transformer
 import spray.json._
 import scala.language.implicitConversions
 import scala.util.Try
-import SerializationSupport._
+import RuntimeSerializationSupport._
 
 /**
   * Created by hwilkins on 11/13/15.
@@ -85,7 +85,7 @@ case class TransformerSerializer(transformer: Transformer) {
   }
 }
 
-trait SerializationSupport extends RuntimeJsonSupport {
+trait RuntimeSerializationSupport extends RuntimeJsonSupport {
   val TransformerCharaset = Charset.forName("UTF-8")
 
   sealed trait PrettyPrint
@@ -125,4 +125,4 @@ trait SerializationSupport extends RuntimeJsonSupport {
     TransformerFileParser(file)
   }
 }
-object SerializationSupport extends SerializationSupport
+object RuntimeSerializationSupport extends RuntimeSerializationSupport
