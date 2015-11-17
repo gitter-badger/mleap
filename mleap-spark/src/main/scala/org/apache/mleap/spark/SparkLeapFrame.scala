@@ -1,5 +1,7 @@
 package org.apache.mleap.spark
 
+import java.util.UUID
+
 import org.apache.mleap.runtime._
 import org.apache.mleap.runtime.types.{StructField, StructType}
 import org.apache.spark.sql.types

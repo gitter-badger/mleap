@@ -14,7 +14,7 @@ import scala.util.Try
 case class LinearRegressionModel(featuresCol: String,
                                  predictionCol: String,
                                  model: LinearRegression) extends Transformer {
-  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+  override def build[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(featuresCol, VectorType).flatMap {
       case(b, featuresIndex) =>
         b.endWithOutput(predictionCol, DoubleType)(row => model(row.getVector(featuresIndex)))

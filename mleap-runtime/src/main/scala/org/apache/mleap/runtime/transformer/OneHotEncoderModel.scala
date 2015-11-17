@@ -13,7 +13,7 @@ import scala.util.Try
 case class OneHotEncoderModel(inputCol: String,
                               outputCol: String,
                               encoder: OneHotEncoder) extends Transformer {
-  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+  override def build[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(inputCol, DoubleType).flatMap {
       case (b, inputIndex) =>
         b.endWithOutput(outputCol, VectorType)(row => encoder(row.getDouble(inputIndex)))

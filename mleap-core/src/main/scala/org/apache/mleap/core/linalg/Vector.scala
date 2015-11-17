@@ -72,7 +72,7 @@ case class SparseVector(size: Int,
     }
   }
 
-  override def numActives: Int = ???
+  override def numActives: Int = values.length
 
   override def numNonzeros: Int = {
     var nnz = 0

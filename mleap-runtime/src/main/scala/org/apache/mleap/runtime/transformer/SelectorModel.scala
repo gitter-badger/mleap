@@ -10,7 +10,7 @@ import scala.util.Try
   * Created by hwilkins on 11/15/15.
   */
 case class SelectorModel(selectSchema: StructType) extends Transformer {
-  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+  override def build[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withSelect(selectSchema)
   }
 }

@@ -8,7 +8,7 @@ import scala.util.{Success, Try}
 /**
   * Created by hwilkins on 11/15/15.
   */
-case class LeapFrameBuilder[T <: LeapFrame[T]](frame: LeapFrame[T]) extends TransformBuilder[LeapFrameBuilder[T]] {
+case class LeapFrameBuilder[T <: LeapFrame[T]](frame: T) extends TransformBuilder[LeapFrameBuilder[T]] {
   override def validateField(name: String, dataType: DataType): Validation = {
     val otherDataType = frame.schema(name).dataType
     if(dataType == otherDataType) {

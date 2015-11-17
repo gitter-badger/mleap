@@ -170,24 +170,21 @@ case class DataFrameToMleap(dataset: DataFrame) {
     val mleapFieldSet = allFieldSet & fieldSet
     val mleapFields = mleapFieldSet.map(dataset.schema.apply).toArray
 
-    val mleapIndices = mleapFields.map(f => dataset.schema.indexOf(f.name))
-
     val sparkSchema = dataset.schema
     val mleapSchema = StructType(mleapFields).toMleap
 
     // cast MLeap field numeric types to DoubleTypes
-    val cols = dataset.schema.fields.map {
+    val mleapCols = mleapFields.map {
       field =>
-        if(mleapFieldSet.contains(field.name)) {
-          field.dataType match {
-            case _: NumericType | BooleanType => dataset.col(field.name).cast(DoubleType)
-            case _ => dataset.col(field.name)
-          }
-        } else {
-          dataset.col(field.name)
+        field.dataType match {
+          case _: NumericType | BooleanType => dataset.col(field.name).cast(DoubleType).as(s"mleap.${field.name}")
+          case _ => dataset.col(field.name).as(s"mleap.${field.name}")
         }
     }
-    val castDataset = dataset.select(cols: _*)
+    val castDataset = dataset.select(dataset.col("*") +: mleapCols: _*)
+
+    val sparkIndices: Seq[Int] = sparkSchema.fields.indices
+    val mleapIndices = (sparkSchema.fields.length until (sparkSchema.fields.length + mleapSchema.fields.length)).toArray
 
     val rdd = castDataset.rdd.map {
       row =>
@@ -198,8 +195,8 @@ case class DataFrameToMleap(dataset: DataFrame) {
           case value: Vector => value.toMleap
           case value => value
         }
-        val mleapRow = MleapRow(mleapValues: _*)
-        val sparkRow = row.toSeq
+        val mleapRow = MleapRow(mleapValues)
+        val sparkRow = sparkIndices.map(row.apply)
         (mleapRow, sparkRow)
     }
 
@@ -247,7 +244,8 @@ case class LeapFrameToSpark[T <: LeapFrame[T]](frame: LeapFrame[T]) {
 
           Row(sparkData ++ mleapData: _*)
       }
-      val schema = StructType(outputFrame.schema.toSpark.fields ++ outputFrame.sparkSchema.fields)
+
+      val schema = StructType(outputFrame.sparkSchema.fields ++ outputFrame.schema.toSpark.fields)
       sqlContext.createDataFrame(rows, schema)
     case _ =>
       val schema = frame.schema.toSpark

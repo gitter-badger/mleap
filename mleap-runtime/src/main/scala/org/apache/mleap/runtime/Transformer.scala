@@ -23,8 +23,8 @@ object Transformer {
 }
 
 trait Transformer extends Serializable {
-  def schema(): Try[TransformerSchema] = transform(TransformerSchemaBuilder()).map(_.build())
-  def transform[T <: LeapFrame[T]](frame: LeapFrame[T]): Try[LeapFrame[T]] =
-    transform(LeapFrameBuilder(frame)).map(_.frame)
-  def transform[T <: TransformBuilder[T]](builder: T): Try[T]
+  def schema(): Try[TransformerSchema] = build(TransformerSchemaBuilder()).map(_.build())
+  def transform[T <: LeapFrame[T]](frame: T): Try[T] =
+    build(LeapFrameBuilder(frame)).map(_.frame)
+  def build[T <: TransformBuilder[T]](builder: T): Try[T]
 }

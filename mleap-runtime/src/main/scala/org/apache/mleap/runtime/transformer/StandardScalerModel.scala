@@ -14,7 +14,7 @@ import scala.util.Try
 case class StandardScalerModel(inputCol: String,
                                outputCol: String,
                                scaler: StandardScaler) extends Transformer {
-  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+  override def build[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(inputCol, VectorType).flatMap {
       case (b, inputIndex) =>
         b.endWithOutput(outputCol, VectorType)(row => scaler(row.getVector(inputIndex)))

@@ -87,7 +87,7 @@ trait RuntimeJsonSupport extends DefaultJsonProtocol with CoreJsonSupport {
           case JsString(value) => value
           case value => value.convertTo[Vector]
         }
-        Row(data: _*)
+        Row(data.toArray)
       case value => throw new Error("Invalid JSON Row format: " + value)
     }
   }

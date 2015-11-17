@@ -13,7 +13,7 @@ import scala.util.Try
 case class StringIndexerModel(inputCol: String,
                               outputCol: String,
                               indexer: StringIndexer) extends Transformer {
-  override def transform[T <: TransformBuilder[T]](builder: T): Try[T] = {
+  override def build[T <: TransformBuilder[T]](builder: T): Try[T] = {
     builder.withInput(inputCol, StringType).flatMap {
       case (b, inputIndex) =>
         b.endWithOutput(outputCol, DoubleType)(row => indexer(row.getString(inputIndex)))
