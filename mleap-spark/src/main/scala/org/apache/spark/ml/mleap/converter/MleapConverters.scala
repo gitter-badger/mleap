@@ -153,7 +153,7 @@ case class StructTypeToMleap(schema: StructType) {
 
 case class MleapTransformerWrapper(transformer: MleapTransformer) {
   def sparkTransform(dataset: DataFrame): DataFrame = {
-    transformer.transform(dataset.toMleap).get.toSpark(dataset.sqlContext)
+    transformer.transform(dataset.toMleap(transformer)).get.toSpark(dataset.sqlContext)
   }
 }
 
@@ -170,6 +170,8 @@ case class DataFrameToMleap(dataset: DataFrame) {
 
     toMleap(mleapFields.map(_.name): _ *)
   }
+
+  def toMleap(transformer: MleapTransformer): SparkLeapFrame = toMleap(transformer.schema().input.fields.map(_.name): _*)
 
   def toMleap(fieldNames: String *): SparkLeapFrame = {
     val fieldSet = fieldNames.toSet
