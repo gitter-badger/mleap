@@ -1,7 +1,5 @@
 package org.apache.mleap.spark
 
-import java.util.UUID
-
 import org.apache.mleap.runtime._
 import org.apache.mleap.runtime.types.{StructField, StructType}
 import org.apache.spark.sql.types
@@ -20,10 +18,7 @@ case class SparkLeapFrame(schema: StructType,
     val schema2 = schema.select(indices: _*)
     val dataset2 = dataset.map(_.select(indices: _*))
 
-    SparkLeapFrame(schema2,
-      sparkSchema,
-      dataset2,
-      outputFields = outputFields & fields.toSet)
+    copy(schema = schema2, dataset = dataset2, outputFields = outputFields & fields.toSet)
   }
 
   def withFeature(field: StructField, f: (Row) => Any): SparkLeapFrame = {
@@ -32,9 +27,31 @@ case class SparkLeapFrame(schema: StructType,
       row => row.withValue(f(row))
     }
 
-    SparkLeapFrame(schema2,
-      sparkSchema,
-      dataset2,
-      outputFields = outputFields + field.name)
+    copy(schema = schema2, dataset = dataset2, outputFields = outputFields + field.name)
+  }
+
+  override def dropFeature(field: String): SparkLeapFrame = {
+    val index = schema.indexOf(field)
+    val size = schema.fields.length - 1
+    val fields = schema.fields.filter(_.name != field)
+    val schema2 = StructType(fields)
+    val dataset2 = dataset.map {
+      row =>
+        val values = new Array[Any](size)
+        val oldValues = row.toArray
+
+        if(index == 0) {
+          oldValues.slice(1, oldValues.length).copyToArray(values)
+        } else if(index == values.length) {
+          oldValues.slice(0, oldValues.length - 1).copyToArray(values)
+        } else {
+          oldValues.slice(0, index).copyToArray(values)
+          oldValues.slice(index + 1, oldValues.length).copyToArray(values, index)
+        }
+
+        Row(values)
+    }
+
+    copy(schema = schema2, dataset = dataset2, outputFields = outputFields - field)
   }
 }
