@@ -42,7 +42,7 @@ trait CoreJsonSupport extends DefaultJsonProtocol {
   private[mleap] case class TypedFormat[T](tpe: String,
                             baseFormat: RootJsonFormat[T]) extends RootJsonFormat[T] {
     override def write(obj: T): JsValue = {
-      JsObject(baseFormat.write(obj).asJsObject.fields + ("type" -> JsString(tpe)))
+      JsObject((("type", JsString(tpe)) +: baseFormat.write(obj).asJsObject.fields.toSeq).toMap)
     }
 
     override def read(json: JsValue): T = baseFormat.read(json)
