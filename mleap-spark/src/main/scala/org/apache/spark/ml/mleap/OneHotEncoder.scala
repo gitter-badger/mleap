@@ -2,7 +2,7 @@ package org.apache.spark.ml.mleap
 
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.ml.attribute._
-import org.apache.spark.ml.mleap.converter.MleapConverters._
+import org.apache.spark.ml.mleap.converter.MleapSparkSupport._
 import org.apache.spark.ml.param.{Params, BooleanParam, ParamMap}
 import org.apache.spark.ml.param.shared.{HasOutputCol, HasInputCol}
 import org.apache.spark.ml.util.{SchemaUtils, Identifiable}
